@@ -17,13 +17,13 @@ import java.util.Observer;
 
 public class Controller implements Observer {
     @FXML
-    protected ListView<Integer> numberList;
+    protected ListView<Long> numberList;
     @FXML
     protected Button startButton;
     @FXML
     protected Label resultLabel;
-    protected ObservableList<Integer> observableList;
-    protected Model model;
+    private ObservableList<Long> observableList;
+    private Model model;
     private ResultObserver resultObserver;
 
 
@@ -45,7 +45,7 @@ public class Controller implements Observer {
     public void update(Observable o, Object arg) {
         Platform.runLater(() -> {
             if (arg instanceof BigInteger) {
-                observableList.add(((BigInteger) arg).intValue());
+                observableList.add(((BigInteger) arg).longValue());
                 numberList.setItems(observableList);
                 numberList.refresh();
             }
@@ -88,7 +88,7 @@ public class Controller implements Observer {
         this.resultObserver = new ResultObserver();
     }
 
-    public ObservableList<Integer> getObservableList() {
+    public ObservableList<Long> getObservableList() {
         return observableList;
     }
 

@@ -6,6 +6,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Model extends java.util.Observable {
 
@@ -14,21 +15,43 @@ public class Model extends java.util.Observable {
     private BigInteger result;
     private boolean isFinished;
     private final int NUMBERS_QUANTITY = 10000;
+    private ThreadA threadA;
+    private ThreadB threadB;
+    private boolean isWaiting = false;
 
 
     public Model() {
         this.result = new BigInteger("0");
         this.isFinished = false;
+        threadA = new ThreadA();
+        threadB = new ThreadB();
     }
 
     public void start() {
-        ThreadA threadA = new ThreadA();
-        ThreadB threadB = new ThreadB();
+        threadA = new ThreadA();
+        threadB = new ThreadB();
         threadA.start();
         threadB.start();
     }
 
     public void reset() {
+        System.out.println("reset");
+        //noinspection StatementWithEmptyBody
+        if (!threadA.isFinished() && !threadB.isFinished()) {
+            threadA.interrupt();
+            threadB.interrupt();
+            synchronized (this) {
+                try {
+                    setWaiting(true);
+                    this.wait();
+                } catch (InterruptedException e) {
+                    return;
+                } finally {
+                    setWaiting(false);
+                }
+            }
+        }
+        System.out.println("reset2");
         result = new BigInteger("0");
         queue.clear();
         setFinished(false);
@@ -36,8 +59,10 @@ public class Model extends java.util.Observable {
 
     public class ThreadA extends Thread {
 
-        private Random randomGenerator;
+        Random randomGenerator;
+        AtomicInteger count = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
+        boolean isFinished = true;
 
         ThreadA() {
             this.randomGenerator = new Random();
@@ -45,10 +70,12 @@ public class Model extends java.util.Observable {
 
         @Override
         public void run() {
+            setFinished(false);
+
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
-                    for (int j = 1; j <= NUMBERS_QUANTITY / 2; j++) {
-                        BigInteger bigNumber = new BigInteger(Integer.toString(randomGenerator.nextInt()));
+                    for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
+                        BigInteger bigNumber = new BigInteger(Long.toString(randomGenerator.nextLong()));
                         getQueue().add(bigNumber);
                         setChanged();
                         notifyObservers(bigNumber);
@@ -57,36 +84,83 @@ public class Model extends java.util.Observable {
                         try {
                             sleep(0, 1);
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            break;
                         }
 
                     }
+
+                    if (count.incrementAndGet() == 2) {
+                        setFinished(true);
+                    }
                 }));
             }
-            executor.shutdown();
-            System.out.println("done1");
+            if (this.isInterrupted()) {
+                executor.shutdownNow();
+                synchronized (Model.this) {
+                    if (Model.this.isWaiting()) {
+                        Model.this.notify();
+                    }
+                }
+            } else {
+                executor.shutdown();
+            }
+
+            //System.out.println("done1");
+        }
+
+        boolean isFinished() {
+            return isFinished;
+        }
+
+        void setFinished(boolean finished) {
+            isFinished = finished;
         }
     }
 
     public class ThreadB extends Thread {
 
+        boolean isFinished = true;
+
         @Override
         public void run() {
-            for (int j = 1; j <= NUMBERS_QUANTITY; j++) {
+            setFinished(false);
+            for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
                 try {
                     setResult(getResult().add(getQueue().take()));
                     setChanged();
                     notifyObservers(getResult().toString());
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    setFinished(true);
+                    synchronized (Model.this) {
+                        if (Model.this.isWaiting()) {
+                            Model.this.notify();
+                        }
+                    }
+                    return;
                 }
             }
 
-            setFinished(true);
+            Model.this.setFinished(true);
             setChanged();
             notifyObservers();
-            System.out.println("done2");
+            this.setFinished(true);
+            //System.out.println("done2");
         }
+
+        boolean isFinished() {
+            return isFinished;
+        }
+
+        void setFinished(boolean finished) {
+            isFinished = finished;
+        }
+    }
+    private boolean isWaiting() {
+        return isWaiting;
+    }
+
+    private void setWaiting(boolean waiting) {
+        isWaiting = waiting;
     }
 
     private void setResult(BigInteger result) {
