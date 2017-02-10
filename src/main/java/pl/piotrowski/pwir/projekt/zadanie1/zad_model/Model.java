@@ -35,8 +35,7 @@ public class Model extends java.util.Observable {
     }
 
     public void reset() {
-        System.out.println("reset");
-        //noinspection StatementWithEmptyBody
+        //System.out.println("reset");
         if (!threadA.isFinished() && !threadB.isFinished()) {
             threadA.interrupt();
             threadB.interrupt();
@@ -51,7 +50,7 @@ public class Model extends java.util.Observable {
                 }
             }
         }
-        System.out.println("reset2");
+        //System.out.println("reset2");
         result = new BigInteger("0");
         queue.clear();
         setFinished(false);
@@ -71,6 +70,17 @@ public class Model extends java.util.Observable {
         @Override
         public void run() {
             setFinished(false);
+
+            try {
+                sleep(250);
+            } catch (InterruptedException e) {
+                setFinished(true);
+                synchronized (Model.this) {
+                    if (Model.this.isWaiting()) {
+                        Model.this.notify();
+                    }
+                }
+            }
 
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
@@ -124,6 +134,16 @@ public class Model extends java.util.Observable {
         @Override
         public void run() {
             setFinished(false);
+            try {
+                sleep(500);
+            } catch (InterruptedException e) {
+                setFinished(true);
+                synchronized (Model.this) {
+                    if (Model.this.isWaiting()) {
+                        Model.this.notify();
+                    }
+                }
+            }
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
                 try {
                     setResult(getResult().add(getQueue().take()));

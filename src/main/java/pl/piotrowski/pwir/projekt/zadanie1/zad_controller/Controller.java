@@ -3,7 +3,6 @@ package pl.piotrowski.pwir.projekt.zadanie1.zad_controller;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -27,7 +26,7 @@ public class Controller implements Observer {
     private ResultObserver resultObserver;
 
 
-    public void start(ActionEvent actionEvent) {
+    public void start() {
 
 
         startButton.setDisable(true);
@@ -51,9 +50,9 @@ public class Controller implements Observer {
             }
         });
         if (model.isFinished()) {
-            //Platform.runLater(() -> {
+            Platform.runLater(() -> {
                 startButton.setDisable(false);
-            //});
+            });
         }
 
 
@@ -64,9 +63,7 @@ public class Controller implements Observer {
         public void update(Observable o, Object arg) {
             if (arg instanceof String) {
                 String text = (String) arg;
-                Platform.runLater(() -> {
-                    resultLabel.setText(text);
-                });
+                Platform.runLater(() -> resultLabel.setText(text));
             }
         }
     }
@@ -86,10 +83,6 @@ public class Controller implements Observer {
 
     public void initResultObserver() {
         this.resultObserver = new ResultObserver();
-    }
-
-    public ObservableList<Long> getObservableList() {
-        return observableList;
     }
 
     public void initObservableList() {
