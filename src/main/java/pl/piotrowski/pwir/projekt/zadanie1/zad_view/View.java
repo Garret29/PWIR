@@ -26,6 +26,8 @@ public class View extends Application {
 
 
         Scene scene = new Scene(gridPane, 600, 600);
+        primaryStage.setMinHeight(400);
+        primaryStage.setMinWidth(400);
         primaryStage.setTitle("Zadanie 1 PWiR");
         primaryStage.setScene(scene);
         primaryStage.show();

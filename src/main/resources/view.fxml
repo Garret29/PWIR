@@ -1,37 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 
-<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pl.piotrowski.pwir.projekt.zadanie1.zad_controller.Controller">
-  <columnConstraints>
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-  </columnConstraints>
-  <rowConstraints>
-    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-  </rowConstraints>
-   <children>
-      <ListView fx:id="numberList" prefWidth="284.0" />
-      <GridPane GridPane.columnIndex="1">
-        <columnConstraints>
-          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-        </columnConstraints>
-          <rowConstraints>
-          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-        </rowConstraints>
-         <children>
-            <Label text="Wynik: " GridPane.halignment="RIGHT" />
-            <Label fx:id="resultLabel" text="0" GridPane.columnIndex="1" />
-            <Button fx:id="startButton" mnemonicParsing="false" onAction="#start" text="Start" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2" />
-         </children>
-      </GridPane>
-   </children>
+<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="375" minWidth="400" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pl.piotrowski.pwir.projekt.zadanie1.zad_controller.Controller">
+    <columnConstraints>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+    </rowConstraints>
+    <children>
+        <ListView fx:id="numberList" prefWidth="284.0" />
+        <GridPane GridPane.columnIndex="1">
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            </rowConstraints>
+            <children>
+                <Label text="Wynik: " GridPane.halignment="RIGHT" />
+                <Slider fx:id="delaySpinner" blockIncrement="50.0" majorTickUnit="100.0" max="1000.0" minorTickCount="1" showTickLabels="true" showTickMarks="true" value="150.0" GridPane.columnSpan="2" GridPane.rowIndex="1">
+                    <GridPane.margin>
+                        <Insets left="15.0" right="15.0" />
+                    </GridPane.margin>
+                </Slider>
+                <Label fx:id="resultLabel" text="0" GridPane.columnIndex="1" />
+                <Label text="Opóźnienie[ms]:" GridPane.rowIndex="1">
+                    <GridPane.margin>
+                        <Insets bottom="60.0" left="5.0" />
+                    </GridPane.margin>
+                </Label>
+                <Label text="Opcje:" GridPane.halignment="RIGHT" GridPane.rowIndex="1" GridPane.valignment="TOP" />
+                <Button fx:id="startButton" mnemonicParsing="false" onAction="#start" text="Start" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="2">
+               <GridPane.margin>
+                  <Insets />
+               </GridPane.margin></Button>
+                <RadioButton fx:id="longRadio" mnemonicParsing="false" onAction="#numberTypeChangeAction" text="Long" GridPane.rowIndex="2" GridPane.valignment="BOTTOM">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="NumberOptions" />
+                    </toggleGroup>
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                    </padding>
+               <GridPane.margin>
+                  <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+               </GridPane.margin>
+                </RadioButton>
+                <RadioButton fx:id="integerRadio" mnemonicParsing="false" onAction="#numberTypeChangeAction" selected="true" text="Integer" toggleGroup="$NumberOptions" GridPane.rowIndex="2" GridPane.valignment="TOP">
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                    </padding>
+               <GridPane.margin>
+                  <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+               </GridPane.margin>
+                </RadioButton>
+            </children>
+        </GridPane>
+    </children>
 </GridPane>

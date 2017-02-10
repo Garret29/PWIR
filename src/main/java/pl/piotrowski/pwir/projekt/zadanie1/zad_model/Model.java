@@ -10,21 +10,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Model extends java.util.Observable {
 
-
-    private final BlockingQueue<BigInteger> queue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<BigInteger> queue;
     private BigInteger result;
     private boolean isFinished;
     private final int NUMBERS_QUANTITY = 10000;
     private ThreadA threadA;
     private ThreadB threadB;
     private boolean isWaiting = false;
-
+    private long delay;
+    private boolean isGeneratingLongs;
 
     public Model() {
         this.result = new BigInteger("0");
         this.isFinished = false;
         threadA = new ThreadA();
         threadB = new ThreadB();
+        delay = 150;
+        queue = new LinkedBlockingQueue<>();
     }
 
     public void start() {
@@ -34,11 +36,18 @@ public class Model extends java.util.Observable {
         threadB.start();
     }
 
+    public void stop() {
+        System.out.println("interrupting A");
+        threadA.interrupt();
+        System.out.println("interrupting B");
+        threadB.interrupt();
+
+    }
+
     public void reset() {
-        //System.out.println("reset");
-        if (!threadA.isFinished() && !threadB.isFinished()) {
-            threadA.interrupt();
-            threadB.interrupt();
+        if (!threadA.isFinished() || !threadB.isFinished()) {
+            System.out.println("stop!");
+            stop();
             synchronized (this) {
                 try {
                     setWaiting(true);
@@ -50,11 +59,25 @@ public class Model extends java.util.Observable {
                 }
             }
         }
-        //System.out.println("reset2");
         result = new BigInteger("0");
         queue.clear();
+        setChanged();
+        notifyObservers();
         setFinished(false);
     }
+
+    public void setDelay(long delay) {
+        this.delay = delay;
+    }
+
+    private boolean isGeneratingLongs() {
+        return isGeneratingLongs;
+    }
+
+    public void setGeneratingLongs(boolean generatingLongs) {
+        isGeneratingLongs = generatingLongs;
+    }
+
 
     public class ThreadA extends Thread {
 
@@ -62,6 +85,7 @@ public class Model extends java.util.Observable {
         AtomicInteger count = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         boolean isFinished = true;
+        final Object syncObject = new Object();
 
         ThreadA() {
             this.randomGenerator = new Random();
@@ -72,7 +96,7 @@ public class Model extends java.util.Observable {
             setFinished(false);
 
             try {
-                sleep(250);
+                sleep(50);
             } catch (InterruptedException e) {
                 setFinished(true);
                 synchronized (Model.this) {
@@ -80,20 +104,31 @@ public class Model extends java.util.Observable {
                         Model.this.notify();
                     }
                 }
+                System.out.println("interrupted A");
+                Model.this.setFinished(true);
+                return;
             }
 
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
                     for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
-                        BigInteger bigNumber = new BigInteger(Long.toString(randomGenerator.nextLong()));
+
+                        BigInteger bigNumber;
+
+                        if (isGeneratingLongs()) {
+                            bigNumber = new BigInteger(Long.toString(randomGenerator.nextLong()));
+                        } else {
+                            bigNumber = new BigInteger(Integer.toString(randomGenerator.nextInt()));
+                        }
+
                         getQueue().add(bigNumber);
                         setChanged();
                         notifyObservers(bigNumber);
 
-                        //Not necessary, made to make GUI update smoothly
                         try {
-                            sleep(0, 1);
+                            sleep(delay, 1);
                         } catch (InterruptedException e) {
+                            System.out.println("interrupted A_minor");
                             break;
                         }
 
@@ -101,21 +136,33 @@ public class Model extends java.util.Observable {
 
                     if (count.incrementAndGet() == 2) {
                         setFinished(true);
+                        synchronized (threadA.syncObject) {
+                            threadA.syncObject.notify();
+                        }
                     }
                 }));
             }
-            if (this.isInterrupted()) {
+
+            try {
+                synchronized (syncObject) {
+                    syncObject.wait();
+                }
+            } catch (InterruptedException e) {
+                System.out.println("interrupted A");
                 executor.shutdownNow();
                 synchronized (Model.this) {
                     if (Model.this.isWaiting()) {
                         Model.this.notify();
                     }
                 }
-            } else {
-                executor.shutdown();
+                setFinished(true);
+                Model.this.setFinished(true);
+                return;
             }
 
-            //System.out.println("done1");
+            setFinished(true);
+            executor.shutdown();
+
         }
 
         boolean isFinished() {
@@ -135,7 +182,7 @@ public class Model extends java.util.Observable {
         public void run() {
             setFinished(false);
             try {
-                sleep(500);
+                sleep(50);
             } catch (InterruptedException e) {
                 setFinished(true);
                 synchronized (Model.this) {
@@ -143,7 +190,11 @@ public class Model extends java.util.Observable {
                         Model.this.notify();
                     }
                 }
+                System.out.println("interrupted B");
+                Model.this.setFinished(true);
+                return;
             }
+
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
                 try {
                     setResult(getResult().add(getQueue().take()));
@@ -156,6 +207,8 @@ public class Model extends java.util.Observable {
                             Model.this.notify();
                         }
                     }
+                    System.out.println("interrupted B");
+                    Model.this.setFinished(true);
                     return;
                 }
             }
@@ -164,7 +217,7 @@ public class Model extends java.util.Observable {
             setChanged();
             notifyObservers();
             this.setFinished(true);
-            //System.out.println("done2");
+            System.out.println("done2");
         }
 
         boolean isFinished() {
@@ -175,6 +228,7 @@ public class Model extends java.util.Observable {
             isFinished = finished;
         }
     }
+
     private boolean isWaiting() {
         return isWaiting;
     }
