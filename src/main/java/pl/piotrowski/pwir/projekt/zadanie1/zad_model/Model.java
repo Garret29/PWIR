@@ -2,10 +2,7 @@ package pl.piotrowski.pwir.projekt.zadanie1.zad_model;
 
 import java.math.BigInteger;
 import java.util.Random;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -14,7 +11,7 @@ public class Model extends java.util.Observable {
     private final BlockingQueue<BigInteger> queue;
     private BigInteger result;
     private boolean isFinished;
-    private final int NUMBERS_QUANTITY = 100000;
+    private final int NUMBERS_QUANTITY = 3000;
     private ThreadA threadA;
     private ThreadB threadB;
     private boolean isWaiting = false;
@@ -37,7 +34,7 @@ public class Model extends java.util.Observable {
         threadA = new ThreadA();
         threadB = new ThreadB();
         threadA.start();
-        threadB.start();
+        //threadB.start();
     }
 
     public void reset() {
@@ -92,13 +89,16 @@ public class Model extends java.util.Observable {
 
 
         AtomicInteger count = new AtomicInteger(0);
-        ExecutorService executor = Executors.newFixedThreadPool(2);
+        ExecutorService generatingExecutor = Executors.newFixedThreadPool(2);
+        ExecutorService addingExecutor = Executors.newFixedThreadPool(1);
         boolean isFinished = true;
         final Object syncObject = new Object();
+        BigInteger result = null;
 
         @Override
         public void run() {
             setFinished(false);
+            setResult(new BigInteger("0"));
             try {
                 sleep(50);
             } catch (InterruptedException e) {
@@ -112,8 +112,10 @@ public class Model extends java.util.Observable {
                 return;
             }
 
+            Future<BigInteger> future = addingExecutor.submit((Callable<BigInteger>) threadB);
+
             for (int i = 0; i < 2; i++) {
-                executor.execute(new Thread(() -> {
+                generatingExecutor.execute(new Thread(() -> {
                     Random randomGenerator = new Random();
                     for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
 
@@ -158,7 +160,8 @@ public class Model extends java.util.Observable {
                 }
             } catch (InterruptedException e) {
                 Model.this.setFinished(true);
-                executor.shutdownNow();
+                generatingExecutor.shutdownNow();
+                addingExecutor.shutdownNow();
                 synchronized (Model.this) {
                     if (Model.this.isWaiting()) {
                         Model.this.notify();
@@ -169,8 +172,16 @@ public class Model extends java.util.Observable {
             }
 
             setFinished(true);
-            executor.shutdown();
+            generatingExecutor.shutdown();
+            addingExecutor.shutdown();
+            try {
+                setResult(future.get());
+            } catch (InterruptedException | ExecutionException ignored) {
+            }
+        }
 
+        BigInteger getResult() {
+            return result;
         }
 
         boolean isFinished() {
@@ -180,16 +191,20 @@ public class Model extends java.util.Observable {
         void setFinished(boolean finished) {
             isFinished = finished;
         }
+
+        void setResult(BigInteger result) {
+            this.result = result;
+        }
     }
 
-    public class ThreadB extends Thread {
+    public class ThreadB extends Thread implements Callable<BigInteger> {
 
         boolean isFinished = true;
         final Object syncObject = new Object();
         private boolean waiting;
 
         @Override
-        public void run() {
+        public BigInteger call() {
             setFinished(false);
             try {
                 sleep(50);
@@ -201,7 +216,7 @@ public class Model extends java.util.Observable {
                         Model.this.notify();
                     }
                 }
-                return;
+                return null;
             }
 
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
@@ -229,7 +244,7 @@ public class Model extends java.util.Observable {
                             Model.this.notify();
                         }
                     }
-                    return;
+                    return null;
                 }
             }
 
@@ -237,6 +252,7 @@ public class Model extends java.util.Observable {
             setChanged();
             notifyObservers();
             this.setFinished(true);
+            return getResult();
         }
 
         Object getSyncObject() {
