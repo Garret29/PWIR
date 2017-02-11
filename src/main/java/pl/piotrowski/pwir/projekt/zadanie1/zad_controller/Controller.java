@@ -1,11 +1,8 @@
 package pl.piotrowski.pwir.projekt.zadanie1.zad_controller;
 
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -16,6 +13,7 @@ import java.net.URL;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Controller implements Observer, Initializable {
@@ -33,6 +31,7 @@ public class Controller implements Observer, Initializable {
     protected Button startButton;
     @FXML
     protected Label resultLabel;
+    private AtomicInteger count = new AtomicInteger(0);
     private ObservableList<Long> observableList;
     private Model model;
     private ResultObserver resultObserver;
@@ -50,36 +49,42 @@ public class Controller implements Observer, Initializable {
         model.start();
     }
 
+    public void stop() {
+        model.stop();
+        Platform.runLater(() -> {
+            numberList.setItems(null);
+            numberList.refresh();
+            observableList.clear();
+            resultLabel.setText("0");
+        });
+    }
+
 
     public void update(Observable o, Object arg) {
-        Platform.runLater(() -> {
-            if (arg instanceof BigInteger) {
+
+        if (arg instanceof BigInteger) {
+            System.out.println(count.incrementAndGet());
+            Platform.runLater(() -> {
                 observableList.add(0, ((BigInteger) arg).longValue());
                 numberList.setItems(observableList);
                 numberList.refresh();
-            }
-        });
-
+            });
+        }
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        delaySpinner.valueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                model.setDelay(newValue.longValue());
-            }
-        });
-
+        delaySpinner.valueProperty().addListener((observable, oldValue, newValue) -> model.setDelay(newValue.longValue()));
     }
 
-    public void numberTypeChangeAction(ActionEvent actionEvent) {
+    public void numberTypeChangeAction() {
         if (longRadio.isSelected()) {
             model.setGeneratingLongs(true);
         } else {
             model.setGeneratingLongs(false);
         }
     }
+
 
     public class ResultObserver implements Observer {
 
@@ -91,6 +96,7 @@ public class Controller implements Observer, Initializable {
 
             if (model.isFinished()) {
                 Platform.runLater(() -> startButton.setDisable(false));
+                System.out.println("rozmiar: " + numberList.itemsProperty().get().size());
             }
         }
     }

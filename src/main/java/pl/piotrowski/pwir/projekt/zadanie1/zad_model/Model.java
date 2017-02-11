@@ -7,18 +7,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Model extends java.util.Observable {
 
     private final BlockingQueue<BigInteger> queue;
     private BigInteger result;
     private boolean isFinished;
-    private final int NUMBERS_QUANTITY = 10000;
+    private final int NUMBERS_QUANTITY = 1500;
     private ThreadA threadA;
     private ThreadB threadB;
-    private boolean isWaiting = false;
+    private boolean isWaiting = true;
     private long delay;
     private boolean isGeneratingLongs;
+    private ReentrantLock lock;
 
     public Model() {
         this.result = new BigInteger("0");
@@ -27,27 +29,30 @@ public class Model extends java.util.Observable {
         threadB = new ThreadB();
         delay = 150;
         queue = new LinkedBlockingQueue<>();
+        lock = new ReentrantLock();
     }
 
     public void start() {
+        setFinished(false);
         threadA = new ThreadA();
         threadB = new ThreadB();
         threadA.start();
         threadB.start();
     }
 
-    public void stop() {
-        System.out.println("interrupting A");
-        threadA.interrupt();
-        System.out.println("interrupting B");
-        threadB.interrupt();
-
+    public void reset() {
+        result = new BigInteger("0");
+        queue.clear();
+        setFinished(false);
+        setChanged();
+        notifyObservers();
     }
 
-    public void reset() {
+    public void stop() {
+
         if (!threadA.isFinished() || !threadB.isFinished()) {
-            System.out.println("stop!");
-            stop();
+            threadA.interrupt();
+            threadB.interrupt();
             synchronized (this) {
                 try {
                     setWaiting(true);
@@ -59,11 +64,12 @@ public class Model extends java.util.Observable {
                 }
             }
         }
+
         result = new BigInteger("0");
         queue.clear();
         setChanged();
         notifyObservers();
-        setFinished(false);
+
     }
 
     public void setDelay(long delay) {
@@ -78,39 +84,37 @@ public class Model extends java.util.Observable {
         isGeneratingLongs = generatingLongs;
     }
 
+    private ReentrantLock getLock() {
+        return lock;
+    }
 
     public class ThreadA extends Thread {
 
-        Random randomGenerator;
+
         AtomicInteger count = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         boolean isFinished = true;
         final Object syncObject = new Object();
 
-        ThreadA() {
-            this.randomGenerator = new Random();
-        }
-
         @Override
         public void run() {
             setFinished(false);
-
             try {
                 sleep(50);
             } catch (InterruptedException e) {
                 setFinished(true);
+                Model.this.setFinished(true);
                 synchronized (Model.this) {
                     if (Model.this.isWaiting()) {
                         Model.this.notify();
                     }
                 }
-                System.out.println("interrupted A");
-                Model.this.setFinished(true);
                 return;
             }
 
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
+                    Random randomGenerator=new Random();
                     for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
 
                         BigInteger bigNumber;
@@ -121,14 +125,15 @@ public class Model extends java.util.Observable {
                             bigNumber = new BigInteger(Integer.toString(randomGenerator.nextInt()));
                         }
 
+                        getLock().lock();
                         getQueue().add(bigNumber);
                         setChanged();
                         notifyObservers(bigNumber);
+                        getLock().unlock();
 
                         try {
                             sleep(delay, 1);
                         } catch (InterruptedException e) {
-                            System.out.println("interrupted A_minor");
                             break;
                         }
 
@@ -148,7 +153,7 @@ public class Model extends java.util.Observable {
                     syncObject.wait();
                 }
             } catch (InterruptedException e) {
-                System.out.println("interrupted A");
+                Model.this.setFinished(true);
                 executor.shutdownNow();
                 synchronized (Model.this) {
                     if (Model.this.isWaiting()) {
@@ -156,7 +161,6 @@ public class Model extends java.util.Observable {
                     }
                 }
                 setFinished(true);
-                Model.this.setFinished(true);
                 return;
             }
 
@@ -185,13 +189,12 @@ public class Model extends java.util.Observable {
                 sleep(50);
             } catch (InterruptedException e) {
                 setFinished(true);
+                Model.this.setFinished(true);
                 synchronized (Model.this) {
                     if (Model.this.isWaiting()) {
                         Model.this.notify();
                     }
                 }
-                System.out.println("interrupted B");
-                Model.this.setFinished(true);
                 return;
             }
 
@@ -202,13 +205,12 @@ public class Model extends java.util.Observable {
                     notifyObservers(getResult().toString());
                 } catch (InterruptedException e) {
                     setFinished(true);
+                    Model.this.setFinished(true);
                     synchronized (Model.this) {
                         if (Model.this.isWaiting()) {
                             Model.this.notify();
                         }
                     }
-                    System.out.println("interrupted B");
-                    Model.this.setFinished(true);
                     return;
                 }
             }
