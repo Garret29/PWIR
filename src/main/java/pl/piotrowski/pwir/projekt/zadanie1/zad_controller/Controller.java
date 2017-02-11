@@ -16,21 +16,27 @@ import java.util.ResourceBundle;
 
 public class Controller implements Observer, Initializable {
     @FXML
-    public Slider delaySpinner;
+    private
+    Slider delaySpinner;
     @FXML
-    public RadioButton longRadio;
+    private
+    RadioButton longRadio;
     @FXML
-    public ToggleGroup NumberOptions;
+    ToggleGroup NumberOptions;
     @FXML
-    public RadioButton integerRadio;
+    RadioButton integerRadio;
     @FXML
-    public Button stopButton;
+    Button stopButton;
     @FXML
-    protected ListView<Long> numberList;
+    private
+    ListView<Long> numberList;
     @FXML
-    protected Button startButton;
+    private
+    Button startButton;
     @FXML
-    protected Label resultLabel;
+    private
+    Label resultLabel;
+
     private ObservableList<Long> observableList;
     private Model model;
     private ResultObserver resultObserver;

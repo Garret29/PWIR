@@ -14,10 +14,10 @@ public class Model extends java.util.Observable {
     private final BlockingQueue<BigInteger> queue;
     private BigInteger result;
     private boolean isFinished;
-    private final int NUMBERS_QUANTITY = 1500;
+    private final int NUMBERS_QUANTITY = 100000;
     private ThreadA threadA;
     private ThreadB threadB;
-    private boolean isWaiting = true;
+    private boolean isWaiting = false;
     private long delay;
     private boolean isGeneratingLongs = false;
     private ReentrantLock lock;
@@ -38,7 +38,6 @@ public class Model extends java.util.Observable {
         threadB = new ThreadB();
         threadA.start();
         threadB.start();
-        System.out.println("start");
     }
 
     public void reset() {
@@ -47,7 +46,6 @@ public class Model extends java.util.Observable {
         setFinished(false);
         setChanged();
         notifyObservers();
-        System.out.println("reset");
     }
 
     public void stop() {
@@ -100,7 +98,6 @@ public class Model extends java.util.Observable {
 
         @Override
         public void run() {
-            System.out.println("start A");
             setFinished(false);
             try {
                 sleep(50);
@@ -117,7 +114,6 @@ public class Model extends java.util.Observable {
 
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
-                    System.out.println("start A_minor");
                     Random randomGenerator = new Random();
                     for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
 
@@ -194,7 +190,6 @@ public class Model extends java.util.Observable {
 
         @Override
         public void run() {
-            System.out.println("start B");
             setFinished(false);
             try {
                 sleep(50);
@@ -211,19 +206,21 @@ public class Model extends java.util.Observable {
 
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
                 try {
-                    if (!getQueue().isEmpty()) {
-                        getLock().lock();
-                        setResult(getResult().add(getQueue().take()));
-                        setChanged();
-                        notifyObservers(getResult().toString());
-                        getLock().unlock();
-                    } else {
+                    if (getQueue().isEmpty()) {
                         synchronized (syncObject) {
                             setWaiting(true);
                             syncObject.wait();
                             setWaiting(false);
                         }
                     }
+
+                    getLock().lock();
+                    setResult(getResult().add(getQueue().take()));
+                    setChanged();
+                    notifyObservers(getResult().toString());
+                    getLock().unlock();
+
+
                 } catch (InterruptedException e) {
                     setFinished(true);
                     Model.this.setFinished(true);
@@ -240,7 +237,6 @@ public class Model extends java.util.Observable {
             setChanged();
             notifyObservers();
             this.setFinished(true);
-            System.out.println("done2");
         }
 
         Object getSyncObject() {
