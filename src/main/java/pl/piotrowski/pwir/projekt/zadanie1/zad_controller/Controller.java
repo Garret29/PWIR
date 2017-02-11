@@ -13,8 +13,6 @@ import java.net.URL;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.ResourceBundle;
-import java.util.concurrent.atomic.AtomicInteger;
-
 
 public class Controller implements Observer, Initializable {
     @FXML
@@ -26,12 +24,13 @@ public class Controller implements Observer, Initializable {
     @FXML
     public RadioButton integerRadio;
     @FXML
+    public Button stopButton;
+    @FXML
     protected ListView<Long> numberList;
     @FXML
     protected Button startButton;
     @FXML
     protected Label resultLabel;
-    private AtomicInteger count = new AtomicInteger(0);
     private ObservableList<Long> observableList;
     private Model model;
     private ResultObserver resultObserver;
@@ -59,11 +58,10 @@ public class Controller implements Observer, Initializable {
         });
     }
 
-
+    @Override
     public void update(Observable o, Object arg) {
 
         if (arg instanceof BigInteger) {
-            System.out.println(count.incrementAndGet());
             Platform.runLater(() -> {
                 observableList.add(0, ((BigInteger) arg).longValue());
                 numberList.setItems(observableList);
@@ -96,7 +94,6 @@ public class Controller implements Observer, Initializable {
 
             if (model.isFinished()) {
                 Platform.runLater(() -> startButton.setDisable(false));
-                System.out.println("rozmiar: " + numberList.itemsProperty().get().size());
             }
         }
     }

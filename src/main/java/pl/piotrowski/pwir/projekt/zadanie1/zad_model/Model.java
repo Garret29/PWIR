@@ -19,7 +19,7 @@ public class Model extends java.util.Observable {
     private ThreadB threadB;
     private boolean isWaiting = true;
     private long delay;
-    private boolean isGeneratingLongs;
+    private boolean isGeneratingLongs = false;
     private ReentrantLock lock;
 
     public Model() {
@@ -38,6 +38,7 @@ public class Model extends java.util.Observable {
         threadB = new ThreadB();
         threadA.start();
         threadB.start();
+        System.out.println("start");
     }
 
     public void reset() {
@@ -46,6 +47,7 @@ public class Model extends java.util.Observable {
         setFinished(false);
         setChanged();
         notifyObservers();
+        System.out.println("reset");
     }
 
     public void stop() {
@@ -98,6 +100,7 @@ public class Model extends java.util.Observable {
 
         @Override
         public void run() {
+            System.out.println("start A");
             setFinished(false);
             try {
                 sleep(50);
@@ -114,7 +117,8 @@ public class Model extends java.util.Observable {
 
             for (int i = 0; i < 2; i++) {
                 executor.execute(new Thread(() -> {
-                    Random randomGenerator=new Random();
+                    System.out.println("start A_minor");
+                    Random randomGenerator = new Random();
                     for (int j = 1; j <= NUMBERS_QUANTITY / 2 && !isInterrupted(); j++) {
 
                         BigInteger bigNumber;
@@ -127,6 +131,10 @@ public class Model extends java.util.Observable {
 
                         getLock().lock();
                         getQueue().add(bigNumber);
+                        if (threadB.isWaiting())
+                            synchronized (threadB.getSyncObject()) {
+                                threadB.getSyncObject().notify();
+                            }
                         setChanged();
                         notifyObservers(bigNumber);
                         getLock().unlock();
@@ -181,9 +189,12 @@ public class Model extends java.util.Observable {
     public class ThreadB extends Thread {
 
         boolean isFinished = true;
+        final Object syncObject = new Object();
+        private boolean waiting;
 
         @Override
         public void run() {
+            System.out.println("start B");
             setFinished(false);
             try {
                 sleep(50);
@@ -200,9 +211,19 @@ public class Model extends java.util.Observable {
 
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
                 try {
-                    setResult(getResult().add(getQueue().take()));
-                    setChanged();
-                    notifyObservers(getResult().toString());
+                    if (!getQueue().isEmpty()) {
+                        getLock().lock();
+                        setResult(getResult().add(getQueue().take()));
+                        setChanged();
+                        notifyObservers(getResult().toString());
+                        getLock().unlock();
+                    } else {
+                        synchronized (syncObject) {
+                            setWaiting(true);
+                            syncObject.wait();
+                            setWaiting(false);
+                        }
+                    }
                 } catch (InterruptedException e) {
                     setFinished(true);
                     Model.this.setFinished(true);
@@ -222,12 +243,24 @@ public class Model extends java.util.Observable {
             System.out.println("done2");
         }
 
+        Object getSyncObject() {
+            return syncObject;
+        }
+
         boolean isFinished() {
             return isFinished;
         }
 
         void setFinished(boolean finished) {
             isFinished = finished;
+        }
+
+        boolean isWaiting() {
+            return waiting;
+        }
+
+        void setWaiting(boolean waiting) {
+            this.waiting = waiting;
         }
     }
 
