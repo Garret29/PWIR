@@ -34,7 +34,6 @@ public class Model extends java.util.Observable {
         threadA = new ThreadA();
         threadB = new ThreadB();
         threadA.start();
-        //threadB.start();
     }
 
     public void reset() {
@@ -67,22 +66,6 @@ public class Model extends java.util.Observable {
         setChanged();
         notifyObservers();
 
-    }
-
-    public void setDelay(long delay) {
-        this.delay = delay;
-    }
-
-    private boolean isGeneratingLongs() {
-        return isGeneratingLongs;
-    }
-
-    public void setGeneratingLongs(boolean generatingLongs) {
-        isGeneratingLongs = generatingLongs;
-    }
-
-    private ReentrantLock getLock() {
-        return lock;
     }
 
     public class ThreadA extends Thread {
@@ -142,7 +125,6 @@ public class Model extends java.util.Observable {
                         } catch (InterruptedException e) {
                             break;
                         }
-
                     }
 
                     if (count.incrementAndGet() == 2) {
@@ -180,10 +162,6 @@ public class Model extends java.util.Observable {
             }
         }
 
-        BigInteger getResult() {
-            return result;
-        }
-
         boolean isFinished() {
             return isFinished;
         }
@@ -216,7 +194,7 @@ public class Model extends java.util.Observable {
                         Model.this.notify();
                     }
                 }
-                return null;
+                return new BigInteger("0");
             }
 
             for (int j = 1; j <= NUMBERS_QUANTITY && !isInterrupted(); j++) {
@@ -244,7 +222,7 @@ public class Model extends java.util.Observable {
                             Model.this.notify();
                         }
                     }
-                    return null;
+                    return new BigInteger("0");
                 }
             }
 
@@ -274,6 +252,22 @@ public class Model extends java.util.Observable {
         void setWaiting(boolean waiting) {
             this.waiting = waiting;
         }
+    }
+
+    public void setDelay(long delay) {
+        this.delay = delay;
+    }
+
+    private boolean isGeneratingLongs() {
+        return isGeneratingLongs;
+    }
+
+    public void setGeneratingLongs(boolean generatingLongs) {
+        isGeneratingLongs = generatingLongs;
+    }
+
+    private ReentrantLock getLock() {
+        return lock;
     }
 
     private boolean isWaiting() {
