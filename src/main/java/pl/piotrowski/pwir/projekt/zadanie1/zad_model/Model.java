@@ -11,7 +11,7 @@ public class Model extends java.util.Observable {
     private final BlockingQueue<BigInteger> queue;
     private BigInteger result;
     private boolean isFinished;
-    private final int NUMBERS_QUANTITY = 3000;
+    private final int NUMBERS_QUANTITY = 100000;
     private ThreadA threadA;
     private ThreadB threadB;
     private boolean isWaiting = false;
